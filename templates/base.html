@@ -9,6 +9,8 @@
 <body>
   <div class="login-area">
     {% if user %}
+      <a class="login-link" href="/_history{{ url }}">history</a>
+        |
       <a class="login-link" href="/_edit{{ url }}">edit</a>
         |
       {{user.name}} (<a class="login-link" href="/logout">logout</a>)

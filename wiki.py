@@ -205,9 +205,12 @@ def Page_key(name = 'default'):
 
 
 class Page(db.Model):
+    url = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
+
+    def render_history(self):
+        self.v = str(self.key().id())
 
 
 class EditPage(BaseHandler):
@@ -224,7 +227,7 @@ class EditPage(BaseHandler):
         content = self.request.get('content')
 
         if content:
-            p = Page(parent = Page_key(), key_name = page_name, content = content)
+            p = Page(parent = Page_key(), url = page_name, content = content)
             p.put()
             self.redirect('%s' % str(page_name))
         else:
@@ -234,8 +237,15 @@ class EditPage(BaseHandler):
 
 class WikiPage(BaseHandler):
     def get(self, page_name):
-        key = db.Key.from_path('Page', str(page_name), parent=Page_key())
-        page = db.get(key)
+        ver = self.request.get("v")
+
+        if ver:
+            key = db.Key.from_path('Page', int(ver), parent=Page_key())
+            page = db.get(key)
+        else:
+            page = db.GqlQuery("SELECT * FROM Page WHERE url = :url ORDER BY created DESC LIMIT 1", url = page_name).fetch(1)
+            if len(page) > 0:
+                page = page[0]
 
         if page:
             self.render('page.html', content = page.content, url = page_name)
@@ -247,11 +257,26 @@ class WikiPage(BaseHandler):
             self.redirect('/login')
 
 
+class HistoryPage(BaseHandler):
+    def get(self, page_name):
+        pages = Page.all().filter("url =", page_name).order("-created")
+
+        if pages:
+            self.render('page_history.html', pages = pages)
+
+        if not pages and self.user:
+            self.redirect('/_edit' + page_name)
+
+        if not pages and not self.user:
+            self.redirect('/login')
+
+
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
                                ('/_edit' + PAGE_RE, EditPage),
+                               ('/_history' + PAGE_RE, HistoryPage),
                                (PAGE_RE, WikiPage),
                                ],
                               debug=True)
