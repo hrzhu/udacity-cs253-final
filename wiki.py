@@ -80,6 +80,7 @@ def valid_pw(name, password, h):
 def users_key(group = 'default'):
     return db.Key.from_path('users', group)
 
+
 class User(db.Model):
     name = db.StringProperty(required = True)
     pw_hash = db.StringProperty(required = True)
@@ -120,6 +121,7 @@ def valid_password(password):
 EMAIL_RE  = re.compile(r'^[\S]+@[\S]+\.[\S]+$')
 def valid_email(email):
     return not email or EMAIL_RE.match(email)
+
 
 class Signup(BaseHandler):
     def get(self):
@@ -174,7 +176,6 @@ class Register(Signup):
             self.redirect('/')
 
 
-
 class Login(BaseHandler):
     def get(self):
         self.render('login-form.html')
@@ -198,13 +199,52 @@ class Logout(BaseHandler):
         self.redirect('/signup')
 
 
+##### wiki stuff
+def Page_key(name = 'default'):
+    return db.Key.from_path('Pages', name)
+
+
+class Page(db.Model):
+    content = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+    last_modified = db.DateTimeProperty(auto_now = True)
+
+
 class EditPage(BaseHandler):
-    pass
+    def get(self, page_name):
+        if self.user:
+            self.render("edit.html")
+        else:
+            self.redirect("/login")
+
+    def post(self, page_name):
+        if not self.user:
+            self.redirect('/signup')
+
+        content = self.request.get('content')
+
+        if content:
+            p = Page(parent = Page_key(), key_name = page_name, content = content)
+            p.put()
+            self.redirect('%s' % str(page_name))
+        else:
+            error = "content, please!"
+            self.render("edit.html", content=content, error=error)
 
 
 class WikiPage(BaseHandler):
     def get(self, page_name):
-        self.render('front.html')
+        key = db.Key.from_path('Page', str(page_name), parent=Page_key())
+        page = db.get(key)
+
+        if page:
+            self.render('page.html', content = page.content, url = page_name)
+
+        if not page and self.user:
+            self.redirect('/_edit' + page_name)
+
+        if not page and not self.user:
+            self.redirect('/login')
 
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'

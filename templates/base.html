@@ -9,6 +9,8 @@
 <body>
   <div class="login-area">
     {% if user %}
+      <a class="login-link" href="/_edit{{ url }}">edit</a>
+        |
       {{user.name}} (<a class="login-link" href="/logout">logout</a>)
     {% else %}
       <a class="login-link" href="/login">login</a>
