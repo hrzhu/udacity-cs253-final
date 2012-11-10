@@ -209,9 +209,6 @@ class Page(db.Model):
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
 
-    def render_history(self):
-        self.v = str(self.key().id())
-
 
 class EditPage(BaseHandler):
     def get(self, page_name):
@@ -243,9 +240,7 @@ class WikiPage(BaseHandler):
             key = db.Key.from_path('Page', int(ver), parent=Page_key())
             page = db.get(key)
         else:
-            page = db.GqlQuery("SELECT * FROM Page WHERE url = :url ORDER BY created DESC LIMIT 1", url = page_name).fetch(1)
-            if len(page) > 0:
-                page = page[0]
+            page = db.GqlQuery("SELECT * FROM Page WHERE url = :url ORDER BY created DESC LIMIT 1", url = page_name).get()
 
         if page:
             self.render('page.html', content = page.content, url = page_name)
